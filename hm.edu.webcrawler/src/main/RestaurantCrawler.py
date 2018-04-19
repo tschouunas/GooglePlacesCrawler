@@ -53,21 +53,48 @@ def crawlData(driver, wait):
     print(numberOfReviews)
         
     numberOfReviewsButton.click()
-    ReviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-tab-info-stats-button-flex')))
-        
-    # Crawl Comments
-        
-    driver.execute_script("window.scrollBy(0, -150);")
-          
+    reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
+    if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
+        # Crawl Comments
+        #scrollOverAllReviews(driver, 0.5)
         
         
+        reviewList = []
+        reviewBox = driver.find_element_by_class_name('section-listbox')
+        
+        reviews = reviewBox.find_elements(By.TAG_NAME, 'data-review-id')
+        
+        
+        print(reviews)
+        #data-review-id
         
         
         
-      
-       
-             
         
+            
+def scrollOverAllReviews(driver, scroll_pause_time):
+   
+        
+        # Get scroll height
+    last_height = driver.execute_script("return document.body.scrollHeight")
+        
+    while True:
+        # Scroll down to bottom
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        
+        # Wait to load page
+        time.sleep(scroll_pause_time)
+        
+        # Calculate new scroll height and compare with last scroll height
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+                
+        reviewBox = driver.find_element_by_class_name('section-listbox')
+                
+        print(reviewBox.length())
+    
         
 city = 'Muenchen'
 print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
