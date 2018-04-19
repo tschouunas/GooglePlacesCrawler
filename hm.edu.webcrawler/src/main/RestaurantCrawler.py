@@ -60,14 +60,28 @@ def crawlData(driver, wait):
         
         
         reviewList = []
-        reviewBox = driver.find_element_by_class_name('section-listbox')
+        reviewBox = driver.find_elements_by_class_name('section-review-content')
         
-        reviews = reviewBox.find_elements_by_tag_name('section-review-content')
+        print('Reviews:')
+        print('')
         
-        print(reviews)
+        for x in range (0,len(reviewBox)) :
+            userName = reviewBox[x].find_element_by_class_name('section-review-title').get_attribute("innerText")
+            reviewText = reviewBox[x].find_element_by_class_name('section-review-text').get_attribute("innerText")
+            
+            
         
-        for x in range :
-            print(x.find_element_by_class_name('section-review-title').getAttribute("innerHTML"))
+            print(userName)
+            print(reviewText)
+            print('')
+        
+        #reviews = driver.find_elements_by_tag_name('section-review-content')
+        
+        
+#         print(reviews[0])
+#         
+#         for x in range (0,3) :
+#             print(reviews[x].find_element_by_class_name('section-review-title').getAttribute("innerHTML"))
             
             #.find_element_by_class_name('section-review-title')).getAttribute("innerHTML"
         
