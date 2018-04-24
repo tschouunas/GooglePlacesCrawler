@@ -1,0 +1,87 @@
+{
+	"GOOGLE PLACES TABLE": {
+		"1": {
+			"Gesamtbewertung": "4,2",
+			"Restaurantname": "Alter Wirt",
+			"Bewertungen": "Ich war erst einmal hier, w\u00fcrde und werde aber immer wieder herkommen. \nDer bayrische Schweinebraten war richtig bayrisch gut. Ebenso das Bier.\nDie Bedienung und der Service waren gut und freundlich.\nDieses Lokal geh\u00f6rt zu den wenigen in M\u00fcnchen, auf die  noch die Pr\u00e4dikate \"bayerisch\" und \"m\u00fcnchnerisch\" zutreffen."
+		}
+	},
+	"_default": {
+		"5": {
+			"count": 3,
+			"type": "peach"
+		},
+		"7": {
+			"count": 3,
+			"type": "peach"
+		},
+		"14": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"Restaurantname": "Alter Wirt"
+		},
+		"10": {
+			"count": 7,
+			"type": "apple"
+		},
+		"17": {
+			"Gesamtbewertung": "4,2",
+			"Restaurantname": "Alter Wirt",
+			"Bewertungen": "Ich war erst einmal hier, w\u00fcrde und werde aber immer wieder herkommen. \nDer bayrische Schweinebraten war richtig bayrisch gut. Ebenso das Bier.\nDie Bedienung und der Service waren gut und freundlich.\nDieses Lokal geh\u00f6rt zu den wenigen in M\u00fcnchen, auf die  noch die Pr\u00e4dikate \"bayerisch\" und \"m\u00fcnchnerisch\" zutreffen."
+		},
+		"3": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"Restaurantname": "Alter Wirt"
+		},
+		"2": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"restaurantname": "Alter Wirt"
+		},
+		"11": {
+			"count": 3,
+			"type": "peach"
+		},
+		"1": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"restaurantname": "Alter Wirt"
+		},
+		"16": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"Restaurantname": "Alter Wirt"
+		},
+		"6": {
+			"count": 7,
+			"type": "apple"
+		},
+		"15": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"Restaurantname": "Alter Wirt"
+		},
+		"4": {
+			"count": 7,
+			"type": "apple"
+		},
+		"9": {
+			"count": 3,
+			"type": "peach"
+		},
+		"12": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Restaurantname":"Alter Wirt"
+		},
+		"8": {
+			"count": 7,
+			"type": "apple"
+		},
+		"13": {
+			"Gesamtbewertung": 4.8,
+			"RestaurantType": "Bayrisches Restaurant",
+			"Restaurantname": "Alter Wirt"
+		}
+	}
+}
