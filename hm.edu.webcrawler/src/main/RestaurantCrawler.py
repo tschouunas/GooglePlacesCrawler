@@ -83,6 +83,7 @@ def crawlData(driver, wait):
     
     restaurant_title = driver.find_element_by_class_name('section-hero-header-title').get_attribute("innerHTML")
     restaurant_stars = driver.find_element_by_class_name('section-star-display').get_attribute("innerHTML")
+    restaurant_rushHour = ''
     numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
     numberOfReviews = int(numberOfReviewsButton.get_attribute("innerHTML")[0:-9])
         
@@ -103,6 +104,12 @@ def crawlData(driver, wait):
         
         print('Reviews:')
         print('')
+        db = TinyDB('..\database\db.json')
+        db.purge()
+        restaurantTable = db.table('RESTAURANT TABLE')
+        reviewTable = db.table('REVIEW TABLE')
+        reviewPicturesTable = db.table('REVIEW PICTURE TABLE')
+        
 
         
         for x in range (0, len(reviewBox)-1) :
@@ -135,24 +142,23 @@ def crawlData(driver, wait):
                     print('Pictures' + review.pictures[k])
             print('---------------------------------------------------')
         
-            restaurant = Restaurant(restaurant_title, restaurant_stars, '' , reviewList)
-            insertIntoDB(restaurant)    
+        restaurant = Restaurant(restaurant_title, restaurant_stars, restaurant_rushHour , reviewList)
         
+        insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable)    
+    
         
-def insertIntoDB(restaurant):
-        db = TinyDB('..\database\db.json')
-        db.purge()
-        #googlePlacesTable = db.table('GOOGLE PLACES TABLE')  
-        # db.insert_multiple({'int': 1, 'value': [i]} for i in range(2))
-
-        db.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Stoßzeiten' : restaurant.rush_hours})
-        #db.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Bewertungen' : [{'User' : reviewList[0].userName, 'Review' : reviewList[0].comment}]})
-    # db.update(add('Restaurantname', 'test'))
-            # db.insert({'Restaurantname': restaurant_title, 'Gesamtbewertung' : restaurant_stars, 'Bewertungen': review.comment})
-        
-        # testTable = db.table("TEST TABLE")
-        
-        # testTable.insert_multiple({'Bewertungen':  reviewList[i]} for i in range(3))
+def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable):
+ 
+    restaurantTable.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Stosszeiten' : restaurant.rush_hours})    
+    reviewTable.insert_multiple({'Restaurantname': restaurant.restaurant_title,'User':  restaurant.reviewList[i].userName, 'Sterne':  restaurant.reviewList[i].reviewStars, 'Kommentar':  restaurant.reviewList[i].comment, } for i in range(len(restaurant.reviewList)))
+    print('Database Pictures:')
+    print('')
+    for j in range (0, len(restaurant.reviewList)-1):
+        print('Reviewer: ' + restaurant.reviewList[j].userName)
+        for k in range (0,len(restaurant.reviewList[j].pictures)):
+            
+            print(restaurant.reviewList[j].pictures[k])
+            reviewPicturesTable.insert({'User':  restaurant.reviewList[j].userName, 'BildURL':  restaurant.reviewList[j].pictures[k]})
         
            
 def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
