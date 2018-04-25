@@ -26,24 +26,37 @@ class Review:
     classdocs
     '''
 
-    def __init__(self, userName, comment, pictures=[]):
+    def __init__(self, userName, reviewStars, comment, pictures=[]):
         self.userName = userName
+        self.reviewStars = reviewStars
         self.comment = comment
         self.pictures = pictures
         '''
         Constructor
     
         '''
+class Restaurant:
+    '''
+    classdocs
+    '''
 
-    def get_userName(self):
-        return self.__userName   
+    def __init__(self, restaurant_title, restaurant_stars, rush_hours, reviewList=[]):
+        self.restaurant_title = restaurant_title
+        self.restaurant_stars = restaurant_stars
+        self.rush_hours = rush_hours
+        self.reviewList = reviewList
+        '''
+        Constructor
     
-    def get_comment(self):
-        return self.__comment
-    
-    def get_pictures(self):
-        return self.__pictures
-    
+        '''
+
+def main():
+    city = 'Muenchen'
+    print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
+    restaurantName = "Alter Wirt"
+    # restaurantName = input()
+    navigateToRestaurantDetailPage(restaurantName, city)
+        
 
 
 def navigateToRestaurantDetailPage(restaurantName , city):
@@ -81,7 +94,7 @@ def crawlData(driver, wait):
     reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
     if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
         # Crawl Comments
-        scrollOverAllReviews(driver, 0.2, wait)
+        scrollOverAllReviews(driver, 0.2, wait, 25)
        
         reviewList = []
         reviewBox = driver.find_elements_by_class_name('section-review-content')
@@ -90,15 +103,12 @@ def crawlData(driver, wait):
         
         print('Reviews:')
         print('')
-        #db = TinyDB('..\database\db.json')
-        #db.purge()
-        #googlePlacesTable = db.table('GOOGLE PLACES TABLE')
-        
-        
+
         
         for x in range (0, len(reviewBox)-1) :
             userName = reviewBox[x].find_element_by_class_name('section-review-title').get_attribute("innerText")
             reviewText = reviewBox[x].find_element_by_class_name('section-review-text').get_attribute("innerText")
+            reviewStars = reviewBox[x].find_element_by_class_name('section-review-stars').get_attribute("aria-label")
             reviewPhotoList = []
             
             present = False
@@ -108,27 +118,36 @@ def crawlData(driver, wait):
             except Exception as err:
                 print('Element: section-review-photo missing', err)    
             if(present == True):
-                photoCount = len(reviewBox[16].find_elements_by_class_name('section-review-photo'))
+                photoCount = len(reviewBox[x].find_elements_by_class_name('section-review-photo'))
                 for i in range (0, photoCount):
                     reviewPhotoList.append(reviewBox[x].find_elements_by_class_name('section-review-photo')[i].get_attribute("style")[21:])
                 print(reviewPhotoList)
             else:
                 reviewPhotoList = [None]
-            review = Review(userName, reviewText, reviewPhotoList)
+            review = Review(userName, reviewStars, reviewText, reviewPhotoList)
             reviewList.append(review)
             print('User: ' + review.userName)
+            print('Sterne: ' + review.reviewStars)
             print('Comment: ' + review.comment)
             if(review.pictures):
                 print('PicturesCount: ' + str(len(review.pictures)))
                 for k in range (0, len(review.pictures)) :
                     print('Pictures' + review.pictures[k])
             print('---------------------------------------------------')
-            
-          
+        
+            restaurant = Restaurant(restaurant_title, restaurant_stars, '' , reviewList)
+            insertIntoDB(restaurant)    
+        
+        
+def insertIntoDB(restaurant):
+        db = TinyDB('..\database\db.json')
+        db.purge()
+        #googlePlacesTable = db.table('GOOGLE PLACES TABLE')  
         # db.insert_multiple({'int': 1, 'value': [i]} for i in range(2))
 
-        #db.insert({'Restaurantname': restaurant_title, 'Gesamtbewertung' : restaurant_stars, 'Bewertungen' : [{'User' : reviewList[0].userName, 'Review' : reviewList[0].comment}]})
-            # db.update(add('Restaurantname', 'test'))
+        db.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Stoßzeiten' : restaurant.rush_hours})
+        #db.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Bewertungen' : [{'User' : reviewList[0].userName, 'Review' : reviewList[0].comment}]})
+    # db.update(add('Restaurantname', 'test'))
             # db.insert({'Restaurantname': restaurant_title, 'Gesamtbewertung' : restaurant_stars, 'Bewertungen': review.comment})
         
         # testTable = db.table("TEST TABLE")
@@ -136,23 +155,16 @@ def crawlData(driver, wait):
         # testTable.insert_multiple({'Bewertungen':  reviewList[i]} for i in range(3))
         
            
-def scrollOverAllReviews(driver, scroll_pause_time, wait):
+def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
         
         # Get scroll height
-    for i in range(8, 50):
+    for i in range(8, numberOfReviews):
             scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']/div/div[3]/div[2]/div/div[4]/button[1]')))
             #ActionChains(driver).move_to_element(scrollElement).perform()
             driver.execute_script("return arguments[0].scrollIntoView();", scrollElement)
-            
-            i = i+7
-            print(i)
+
             time.sleep(scroll_pause_time)
         
-     
-city = 'Muenchen'
-print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
-restaurantName = "Alter Wirt"
-# restaurantName = input()
 
-navigateToRestaurantDetailPage(restaurantName, city)
+main()
 
