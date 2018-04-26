@@ -49,7 +49,8 @@ class Restaurant:
 def main():
     city = 'Muenchen'
     print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
-    restaurantName = "Alter Wirt"
+    #restaurantName = "Alter Wirt"
+    restaurantName = "Arter Hof"
     # restaurantName = input()
     navigateToRestaurantDetailPage(restaurantName, city)
         
@@ -57,22 +58,39 @@ def main():
 
 def navigateToRestaurantDetailPage(restaurantName , city):
         
-        url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
-        print(url)
+    #url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
+    url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.435163,13.1075903,17z'
+    print(url)
         
-        driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
-        driver.get(url) 
-        wait = WebDriverWait(driver, 10)
-        element = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[3]/div[1]')))
-        foundElement = driver.find_element_by_xpath('//*[@id="pane"]/div/div[1]/div/div/div[3]/div[1]')
-        if(foundElement):
-            foundElement.click()
+    driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
+    driver.get(url) 
+    wait = WebDriverWait(driver, 10)
         
-        productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description')))
-        
-        crawlData(driver, wait)
-        
+
+    try:  
+        present = False
+        try:
+            productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description')))
+            present = True
+        except:    
+            present = False
+                
+        if(present == False):  
+            print("Mehrer Ergebnisse wurden gefunden --- Es wird das erste Restaurant in der Liste ausgewählt")     
+            results = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-result-content')))
+            if(results):
+                foundElements = driver.find_elements_by_class_name('section-result-content')
+                if(foundElements):
+                    foundElements[0].click()
+        else:
+            productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description'))) 
+                                
+    except Exception as err:
+        print('Es wurde kein Ergebniss für das Restaurant: ' + restaurantName + ' gefunden.')
         driver.close()
+                      
+    crawlData(driver, wait)
+            
        
         
 def crawlData(driver, wait):     
@@ -112,11 +130,12 @@ def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesT
     
     
     for j in range (0, len(restaurant.reviewList)-1):
-        if(len(restaurant.reviewList[j].pictures) >=1):
-            
+        
             for k in range (0,len(restaurant.reviewList[j].pictures)):
                 
-                reviewPicturesTable.insert({'User':  restaurant.reviewList[j].userName, 'BildURL':  restaurant.reviewList[j].pictures[k]})
+                if(len(restaurant.reviewList[j].pictures) >=1 and restaurant.reviewList[j].pictures[k].contains("https")):
+                
+                    reviewPicturesTable.insert({'User':  restaurant.reviewList[j].userName, 'BildURL':  restaurant.reviewList[j].pictures[k]})
         
            
 def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
@@ -126,9 +145,25 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     reviewList = []
         
     for i in range(1, numberOfReviews):
-        
-            scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
+            try:
+                scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
+            except Exception as err:
+                print('scrollError ')
+                scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']/div/div[3]/div[2]/div/div[5]/div[2]')))
+                
             userName = scrollElement.find_element_by_class_name('section-review-title').get_attribute("innerText")
+            # Mehr Button im Review
+            try:
+                expandReviewButton = scrollElement.find_element_by_class_name('section-expand-review blue-link')
+                expandButtonIsPresent = True
+            except:
+                print('Review Button Error')
+                expandButtonIsPresent = False
+                
+            if(expandButtonIsPresent):
+                expandReviewButton = scrollElement.find_element_by_class_name('section-expand-review blue-link')
+                expandReviewButton.click()
+            
             reviewText = scrollElement.find_element_by_class_name('section-review-text').get_attribute("innerText")
             reviewStars = scrollElement.find_element_by_class_name('section-review-stars').get_attribute("aria-label")
             reviewPhotoList = []
@@ -143,7 +178,7 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 photoCount = len(scrollElement.find_elements_by_class_name('section-review-photo'))
                 for i in range (0, photoCount):
                     reviewPhotoList.append(scrollElement.find_elements_by_class_name('section-review-photo')[i].get_attribute("style")[21:])
-                print(reviewPhotoList)
+               
             else:
                 reviewPhotoList = [None]
             review = Review(userName, reviewStars, reviewText, reviewPhotoList)
