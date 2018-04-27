@@ -63,33 +63,41 @@ def navigateToRestaurantDetailPage(restaurantName , city):
     print(url)
         
     driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
-    driver.get(url) 
+    driver.set_window_position(0, 0)
+    driver.set_window_size(1024, 768)
+    driver.get(url)
     wait = WebDriverWait(driver, 10)
+    
+    try:
         
-
-    try:  
-        present = False
-        try:
-            productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description')))
-            present = True
-        except:    
+        googleElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="consent-bump"]/div/div[2]/span/button[1]')))
+        if(googleElement):
+            googleElement.click()
+    finally:        
+        
+        try:  
             present = False
-                
-        if(present == False):  
-            print("Mehrer Ergebnisse wurden gefunden --- Es wird das erste Restaurant in der Liste ausgewählt")     
-            results = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-result-content')))
-            if(results):
-                foundElements = driver.find_elements_by_class_name('section-result-content')
-                if(foundElements):
-                    foundElements[0].click()
-        else:
-            productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description'))) 
-                                
-    except Exception as err:
-        print('Es wurde kein Ergebniss für das Restaurant: ' + restaurantName + ' gefunden.')
-        driver.close()
-                      
-    crawlData(driver, wait)
+            try:
+                productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description')))
+                present = True
+            except:    
+                present = False
+                    
+            if(present == False):  
+                print("Mehrer Ergebnisse wurden gefunden --- Es wird das erste Restaurant in der Liste ausgewählt")     
+                results = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-result-content')))
+                if(results):
+                    foundElements = driver.find_elements_by_class_name('section-result-content')
+                    if(foundElements):
+                        foundElements[0].click()
+            else:
+                productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description'))) 
+                                    
+        except Exception as err:
+            print('Es wurde kein Ergebniss für das Restaurant: ' + restaurantName + ' gefunden.')
+            driver.close()
+                          
+        crawlData(driver, wait)
             
        
         
