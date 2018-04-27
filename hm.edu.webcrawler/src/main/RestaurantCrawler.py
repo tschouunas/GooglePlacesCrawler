@@ -168,7 +168,8 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 try:
                     expandReviewButton = scrollElement.find_element_by_css_selector('button.section-expand-review.blue-link')
                     
-                    if(expandReviewButton.get_attribute("style") != "display:none"):
+                    
+                    if(expandReviewButton.get_attribute("style") != "display: none;"):
                                             
                         expandButtonIsPresent = True
                 except:
