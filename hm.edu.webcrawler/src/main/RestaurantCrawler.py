@@ -133,7 +133,7 @@ def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesT
         
             for k in range (0,len(restaurant.reviewList[j].pictures)):
                 
-                if(len(restaurant.reviewList[j].pictures) >=1 and restaurant.reviewList[j].pictures[k].contains("https")):
+                if(len(restaurant.reviewList[j].pictures) >=1 and "https" in restaurant.reviewList[j].pictures[k]):
                 
                     reviewPicturesTable.insert({'User':  restaurant.reviewList[j].userName, 'BildURL':  restaurant.reviewList[j].pictures[k]})
         
@@ -145,56 +145,72 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     reviewList = []
         
     for i in range(1, numberOfReviews):
+            ownerReviewIsPresent = False
             try:
                 scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
             except Exception as err:
-                print('scrollError ')
-                scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']/div/div[3]/div[2]/div/div[5]/div[2]')))
+                print('Owner Review gefunden: Element wird übersprungen')
                 
-            userName = scrollElement.find_element_by_class_name('section-review-title').get_attribute("innerText")
-            # Mehr Button im Review
-            try:
-                expandReviewButton = scrollElement.find_element_by_class_name('section-expand-review blue-link')
-                expandButtonIsPresent = True
-            except:
-                print('Review Button Error')
-                expandButtonIsPresent = False
+                ownerReview = scrollElement.find_element_by_class_name('section-review-owner-response-title')
                 
-            if(expandButtonIsPresent):
-                expandReviewButton = scrollElement.find_element_by_class_name('section-expand-review blue-link')
-                expandReviewButton.click()
+                ownerReviewIsPresent = True
+            if(ownerReviewIsPresent == True): 
+                
+                driver.execute_script("return arguments[0].scrollIntoView();", ownerReview)
             
-            reviewText = scrollElement.find_element_by_class_name('section-review-text').get_attribute("innerText")
-            reviewStars = scrollElement.find_element_by_class_name('section-review-stars').get_attribute("aria-label")
-            reviewPhotoList = []
+                time.sleep(scroll_pause_time)   
             
-            present = False
-            try:
-                driver.find_elements_by_class_name('section-review-photo')
-                present = True
-            except Exception as err:
-                print('Element: section-review-photo missing', err)    
-            if(present == True):
-                photoCount = len(scrollElement.find_elements_by_class_name('section-review-photo'))
-                for i in range (0, photoCount):
-                    reviewPhotoList.append(scrollElement.find_elements_by_class_name('section-review-photo')[i].get_attribute("style")[21:])
-               
             else:
-                reviewPhotoList = [None]
-            review = Review(userName, reviewStars, reviewText, reviewPhotoList)
-            reviewList.append(review)
-            print('User: ' + review.userName)
-            print('Sterne: ' + review.reviewStars)
-            print('Comment: ' + review.comment)
-            if(review.pictures):
-                print('PicturesCount: ' + str(len(review.pictures)-1))
-                for k in range (0, len(review.pictures)) :
-                    print('Pictures' + review.pictures[k])
-            print('---------------------------------------------------')
+                
+                userName = scrollElement.find_element_by_class_name('section-review-title').get_attribute("innerText")
+                # Mehr Button im Review
+                expandButtonIsPresent = False
+                try:
+                    expandReviewButton = scrollElement.find_element_by_css_selector('button.section-expand-review.blue-link')
+                    
+                    if(expandReviewButton.get_attribute("style") != "display:none"):
+                                            
+                        expandButtonIsPresent = True
+                except:
+                    
+                    expandButtonIsPresent = False
+                    
+                if(expandButtonIsPresent == True):
+                    
+                    expandReviewButton.click()
+                    
+                
+                reviewText = scrollElement.find_element_by_class_name('section-review-text').get_attribute("innerText")
+                reviewStars = scrollElement.find_element_by_class_name('section-review-stars').get_attribute("aria-label")
+                reviewPhotoList = []
+                
+                present = False
+                try:
+                    driver.find_elements_by_class_name('section-review-photo')
+                    present = True
+                except Exception as err:
+                    print('Element: section-review-photo missing', err)    
+                if(present == True):
+                    photoCount = len(scrollElement.find_elements_by_class_name('section-review-photo'))
+                    for i in range (0, photoCount):
+                        reviewPhotoList.append(scrollElement.find_elements_by_class_name('section-review-photo')[i].get_attribute("style")[21:])
+                   
+                else:
+                    reviewPhotoList = [None]
+                review = Review(userName, reviewStars, reviewText, reviewPhotoList)
+                reviewList.append(review)
+                print('User: ' + review.userName)
+                print('Sterne: ' + review.reviewStars)
+                print('Comment: ' + review.comment)
+                if(review.pictures):
+                    print('PicturesCount: ' + str(len(review.pictures)-1))
+                    for k in range (0, len(review.pictures)) :
+                        print('Pictures' + review.pictures[k])
+                print('---------------------------------------------------')
+                
+                driver.execute_script("return arguments[0].scrollIntoView();", scrollElement)
             
-            driver.execute_script("return arguments[0].scrollIntoView();", scrollElement)
-            
-            time.sleep(scroll_pause_time)
+                time.sleep(scroll_pause_time)
             
     return reviewList   
 
