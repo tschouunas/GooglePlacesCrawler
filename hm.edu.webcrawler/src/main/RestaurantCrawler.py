@@ -50,16 +50,16 @@ def main():
     city = 'Muenchen'
     print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
     #restaurantName = "Alter Wirt"
-    restaurantName = "Arter Hof"
-    # restaurantName = input()
+    #restaurantName = "Arter Hof"
+    restaurantName = input()
     navigateToRestaurantDetailPage(restaurantName, city)
         
 
 
 def navigateToRestaurantDetailPage(restaurantName , city):
         
-    #url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
-    url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.435163,13.1075903,17z'
+    url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
+    #url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.435163,13.1075903,17z'
     print(url)
         
     driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
@@ -95,8 +95,8 @@ def navigateToRestaurantDetailPage(restaurantName , city):
         
 def crawlData(driver, wait):     
     
-    restaurant_title = driver.find_element_by_class_name('section-hero-header-title').get_attribute("innerHTML")
-    restaurant_stars = driver.find_element_by_class_name('section-star-display').get_attribute("innerHTML")
+    restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
+    restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
     restaurant_rushHour = ''
     numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
     numberOfReviews = int(numberOfReviewsButton.get_attribute("innerHTML")[0:-9])
