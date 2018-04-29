@@ -107,7 +107,12 @@ def crawlData(driver, wait):
     restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
     restaurant_rushHour = ''
     numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
-    numberOfReviews = int(numberOfReviewsButton.get_attribute("innerHTML")[0:-9])
+    numberOfReviews = numberOfReviewsButton.get_attribute("innerHTML")[0:-9]
+    if('.' in numberOfReviews):
+        numberOfReviews = int(numberOfReviews.replace('.', ''))
+    else:
+        numberOfReviews = int(numberOfReviews)
+        
         
     print(restaurant_title)
     print(restaurant_stars)
@@ -153,6 +158,10 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     reviewList = []
         
     for i in range(1, numberOfReviews):
+        #google stops loading after 835 Reviews
+        if(i >= 835):
+            break
+        else:    
             ownerReviewIsPresent = False
             try:
                 scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
