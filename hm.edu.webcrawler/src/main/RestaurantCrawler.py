@@ -16,7 +16,6 @@ Created on 17.04.2018
 
 '''
 
-
 class Review:
     '''
     classdocs
@@ -49,8 +48,7 @@ class Restaurant:
 def main():
     city = 'Muenchen'
     print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
-    #restaurantName = "Alter Wirt"
-    #restaurantName = "Arter Hof"
+
     restaurantName = input()
     navigateToRestaurantDetailPage(restaurantName, city)
         
@@ -59,7 +57,6 @@ def main():
 def navigateToRestaurantDetailPage(restaurantName , city):
         
     url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
-    #url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.435163,13.1075903,17z'
     print(url)
         
     driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
@@ -104,46 +101,46 @@ def navigateToRestaurantDetailPage(restaurantName , city):
         
 def crawlData(driver, wait):     
     
-    #googlePlace = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-rating-term'))).find_element_by_class_name('widget-pane-link').get_attribute("innerHTML")
-    googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
-    #googlePlace = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'widget-pane-link'))).get_attribute("innerHTML")
+    try:
+        
+        googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
     
-    if('Restaurant' in googlePlace):
-        
-        restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
-        restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
-        restaurant_rushHour = ''
-        numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
-        numberOfReviews = numberOfReviewsButton.get_attribute("innerHTML")[0:-9]
-        if('.' in numberOfReviews):
-            numberOfReviews = int(numberOfReviews.replace('.', ''))
-        else:
-            numberOfReviews = int(numberOfReviews)
+        if('Restaurant' in googlePlace):
             
-            
-        print(restaurant_title)
-        print(restaurant_stars)
-        print(numberOfReviews)
-            
-        numberOfReviewsButton.click()
-        reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
-        if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
-            # Crawl Comments
-            
-            db = TinyDB('..\database\db.json')
-            db.purge()
-            restaurantTable = db.table('RESTAURANT TABLE')
-            reviewTable = db.table('REVIEW TABLE')
-            reviewPicturesTable = db.table('REVIEW PICTURE TABLE')
-            
-            reviewList = scrollOverAllReviews(driver, 0.1, wait, numberOfReviews)
-            
-            restaurant = Restaurant(restaurant_title, restaurant_stars, restaurant_rushHour , reviewList)
-            
-            insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable)   
-    else: 
-        print('Gefundener Ort ist kein Restaurant')
-        
+            restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
+            restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
+            restaurant_rushHour = ''
+            numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
+            numberOfReviews = numberOfReviewsButton.get_attribute("innerHTML")[0:-9]
+            if('.' in numberOfReviews):
+                numberOfReviews = int(numberOfReviews.replace('.', ''))
+            else:
+                numberOfReviews = int(numberOfReviews)
+                
+                
+            print(restaurant_title)
+            print(restaurant_stars)
+            print(numberOfReviews)
+                
+            numberOfReviewsButton.click()
+            reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
+            if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
+                # Crawl Comments
+                db = TinyDB('..\database\db.json')
+                db.purge()
+                restaurantTable = db.table('RESTAURANT TABLE')
+                reviewTable = db.table('REVIEW TABLE')
+                reviewPicturesTable = db.table('REVIEW PICTURE TABLE')
+                
+                reviewList = scrollOverAllReviews(driver, 0.1, wait, numberOfReviews)
+                
+                restaurant = Restaurant(restaurant_title, restaurant_stars, restaurant_rushHour , reviewList)
+                
+                insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable)   
+        else: 
+            print('Gefundener Ort ist kein Restaurant')
+    except:
+            print('Gefundener Ort ist kein reines Restaurant')
     
         
 def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable):
