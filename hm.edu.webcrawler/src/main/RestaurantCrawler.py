@@ -103,9 +103,10 @@ def crawlData(driver, wait):
     
     try:
         
-        googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
+        googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
+        
     
-        if('Restaurant' in googlePlace):
+        if('Restaurant' in googlePlace or 'restaurant' in googlePlace):
             
             restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
             restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
