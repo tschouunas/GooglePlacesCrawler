@@ -1,49 +1,38 @@
 # coding=utf8
 from builtins import print
 import time
-from tinydb import TinyDB
+from tinydb import TinyDB, Query, where
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
+from inspect import stack
 
 '''
 Created on 17.04.2018
 
-@author: Tschounas
+@author: Jonas Kammerl
 
 
 '''
 
+
 class Review:
-    '''
-    classdocs
-    '''
 
     def __init__(self, userName, reviewStars, comment, pictures=[]):
         self.userName = userName
         self.reviewStars = reviewStars
         self.comment = comment
         self.pictures = pictures
-        '''
-        Constructor
-    
-        '''
+
 class Restaurant:
-    '''
-    classdocs
-    '''
 
     def __init__(self, restaurant_title, restaurant_stars, rush_hours, reviewList=[]):
         self.restaurant_title = restaurant_title
         self.restaurant_stars = restaurant_stars
         self.rush_hours = rush_hours
         self.reviewList = reviewList
-        '''
-        Constructor
-    
-        '''
+
 
 def main():
     city = 'Muenchen'
@@ -51,7 +40,7 @@ def main():
 
     restaurantName = input()
     navigateToRestaurantDetailPage(restaurantName, city)
-        
+    print(restaurantName + " wurde erfolgreich gecrawled!")
 
 
 def navigateToRestaurantDetailPage(restaurantName , city):
@@ -71,7 +60,6 @@ def navigateToRestaurantDetailPage(restaurantName , city):
         if(googleElement):
             googleElement.click()
     finally:        
-        
         
         try:  
             present = False
@@ -96,18 +84,28 @@ def navigateToRestaurantDetailPage(restaurantName , city):
             driver.close()
                           
         crawlData(driver, wait)
-            
        
         
-def crawlData(driver, wait):     
+def crawlData(driver, wait):  
     
     try:
+        db = TinyDB('..\database\db.json', sort_keys=True, indent = 4)
+        db.purge()
+        restaurantTable = db.table('RESTAURANT TABLE')
+        reviewTable = db.table('REVIEW TABLE')
+        reviewPicturesTable = db.table('REVIEW PICTURE TABLE')
         
+    except:
+        print("Fehler beim Anlegen der Datenbank")
+             
+    try:
         googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
-        
+    except:
+        googlePlace = None
+        print('Gefundener Ort ist kein Restaurant')    
     
-        if('Restaurant' in googlePlace or 'restaurant' in googlePlace):
-            
+    if('Restaurant' in googlePlace or 'restaurant' in googlePlace):
+        
             restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
             restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
             restaurant_rushHour = ''
@@ -118,55 +116,61 @@ def crawlData(driver, wait):
             else:
                 numberOfReviews = int(numberOfReviews)
                 
-                
             print(restaurant_title)
             print(restaurant_stars)
             print(numberOfReviews)
+            
                 
             numberOfReviewsButton.click()
             reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
             if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
                 # Crawl Comments
-                db = TinyDB('..\database\db.json')
-                db.purge()
-                restaurantTable = db.table('RESTAURANT TABLE')
-                reviewTable = db.table('REVIEW TABLE')
-                reviewPicturesTable = db.table('REVIEW PICTURE TABLE')
                 
                 reviewList = scrollOverAllReviews(driver, 0.1, wait, numberOfReviews)
                 
                 restaurant = Restaurant(restaurant_title, restaurant_stars, restaurant_rushHour , reviewList)
                 
-                insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable)   
-        else: 
+                insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable)  
+           
+    else: 
             print('Gefundener Ort ist kein Restaurant')
-    except:
-            print('Gefundener Ort ist kein reines Restaurant')
     
         
 def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable):
- 
-    restaurantTable.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Stosszeiten' : restaurant.rush_hours})    
-    reviewTable.insert_multiple({'Restaurantname': restaurant.restaurant_title,'User':  restaurant.reviewList[i].userName, 'Sterne':  restaurant.reviewList[i].reviewStars, 'Kommentar':  restaurant.reviewList[i].comment, } for i in range(len(restaurant.reviewList)))
     
-    
-    for j in range (0, len(restaurant.reviewList)-1):
-        
-            for k in range (0,len(restaurant.reviewList[j].pictures)):
-                
-                if(len(restaurant.reviewList[j].pictures) >=1 and "https" in restaurant.reviewList[j].pictures[k]):
-                
-                    reviewPicturesTable.insert({'User':  restaurant.reviewList[j].userName, 'BildURL':  restaurant.reviewList[j].pictures[k]})
-        
+    if not(checkForDuplicate('Restaurantname',restaurant.restaurant_title, restaurantTable)):
            
+        restaurantTable.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Stosszeiten' : restaurant.rush_hours})    
+    else:
+        print("Restaurant wurde bereits in der Vergangenheit gecrawled")
+        print("Update der Datenbank erfolgt!")     
+        
+    for i in range (0, len(restaurant.reviewList) - 1):   
+        if not(checkForDuplicate('User',restaurant.reviewList[i].userName, reviewTable)):       
+            reviewTable.insert({'Restaurantname': restaurant.restaurant_title, 'User':  restaurant.reviewList[i].userName, 'Sterne':  restaurant.reviewList[i].reviewStars, 'Kommentar':  restaurant.reviewList[i].comment})
+            for k in range (0, len(restaurant.reviewList[i].pictures)):
+                if(len(restaurant.reviewList[i].pictures) >= 1 and "https" in restaurant.reviewList[i].pictures[k]):
+                    reviewPicturesTable.insert({'User':  restaurant.reviewList[i].userName, 'BildURL':  restaurant.reviewList[i].pictures[k]})
+       
+#Wrapper Funktion um zu überprüfen ob das Element bereits in der Datenbank enthalten ist.    
+        
+def checkForDuplicate (dbfield, element, dbTable): 
+           
+    if(dbTable.contains((where(dbfield) == element))): 
+        return True 
+    else:
+        return False   
+
+
 def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     
     print('Reviews:')
     print('')
     reviewList = []
         
-    for i in range(1, numberOfReviews):
-        #google stops loading after 835 Reviews
+    #for i in range(1, numberOfReviews):
+    for i in range(1, 20):    
+        # google stops loading after 835 Reviews
         if(i >= 835):
             break
         else:    
@@ -193,7 +197,6 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 try:
                     expandReviewButton = scrollElement.find_element_by_css_selector('button.section-expand-review.blue-link')
                     
-                    
                     if(expandReviewButton.get_attribute("style") != "display: none;"):
                                             
                         expandButtonIsPresent = True
@@ -204,7 +207,6 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 if(expandButtonIsPresent == True):
                     
                     expandReviewButton.click()
-                    
                 
                 reviewText = scrollElement.find_element_by_class_name('section-review-text').get_attribute("innerText")
                 reviewStars = scrollElement.find_element_by_class_name('section-review-stars').get_attribute("aria-label")
@@ -229,7 +231,7 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 print('Sterne: ' + review.reviewStars)
                 print('Comment: ' + review.comment)
                 if(review.pictures):
-                    print('PicturesCount: ' + str(len(review.pictures)-1))
+                    print('PicturesCount: ' + str(len(review.pictures) - 1))
                     for k in range (0, len(review.pictures)) :
                         print('Pictures' + review.pictures[k])
                 print('---------------------------------------------------')
