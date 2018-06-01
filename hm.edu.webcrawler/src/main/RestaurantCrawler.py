@@ -1,12 +1,11 @@
 # coding=utf8
 from builtins import print
 import time
-from tinydb import TinyDB, Query, where
+from tinydb import TinyDB, where
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from inspect import stack
 
 '''
 Created on 17.04.2018
@@ -16,7 +15,9 @@ Created on 17.04.2018
 
 '''
 
-
+'''     
+class to represent a review of an user
+'''
 class Review:
 
     def __init__(self, userName, reviewStars, comment, pictures=[]):
@@ -25,6 +26,10 @@ class Review:
         self.comment = comment
         self.pictures = pictures
 
+
+'''     
+class to represent a restaurant
+'''
 class Restaurant:
 
     def __init__(self, restaurant_title, restaurant_stars, rush_hours, reviewList=[]):
@@ -33,7 +38,10 @@ class Restaurant:
         self.rush_hours = rush_hours
         self.reviewList = reviewList
 
-
+'''     
+main method to start the GUI and the webcrawler
+ 
+'''
 def main():
     city = 'Muenchen'
     print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
@@ -42,7 +50,11 @@ def main():
     navigateToRestaurantDetailPage(restaurantName, city)
     print(restaurantName + " wurde erfolgreich gecrawled!")
 
-
+'''     
+method to navigate to the Google Place
+validates if the place is a restaurant and uses the method crawlData() to safe the data 
+ 
+'''
 def navigateToRestaurantDetailPage(restaurantName , city):
         
     url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
@@ -84,7 +96,12 @@ def navigateToRestaurantDetailPage(restaurantName , city):
             driver.close()
                           
         crawlData(driver, wait)
-       
+ 
+'''     
+method to crawl the data with selenium and safe the restaurant data to objects from class restaurant.
+After safing the data, the informations will be stored in the database (insertReviewIntoDB())
+ 
+'''       
         
 def crawlData(driver, wait):  
     
@@ -139,7 +156,12 @@ def crawlData(driver, wait):
            
     else: 
             print('Gefundener Ort ist kein Restaurant')
-    
+
+
+'''     
+method to store data in the database including all Reviews, Pictures and main information of the restaurant
+ 
+'''           
         
 def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable):
     
@@ -158,7 +180,10 @@ def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesT
                     if("https" in restaurant.reviewList[i].pictures[k]):
                         reviewPicturesTable.insert({'User':  restaurant.reviewList[i].userName, 'BildURL':  restaurant.reviewList[i].pictures[k]})
        
-#Wrapper Funktion um zu überprüfen ob das Element bereits in der Datenbank enthalten ist.    
+'''     
+wrapper method to check for duplicates in the database tables
+
+''' 
         
 def checkForDuplicate (dbfield, element, dbTable): 
            
@@ -167,6 +192,10 @@ def checkForDuplicate (dbfield, element, dbTable):
     else:
         return False   
 
+'''     
+method to scroll over all reviews and also safing the data to objects from the review class
+
+''' 
 
 def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     
