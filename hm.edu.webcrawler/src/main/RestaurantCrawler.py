@@ -103,7 +103,7 @@ def crawlData(driver, wait):
     except:
         googlePlace = None
         print('Gefundener Ort ist kein Restaurant')    
-    
+    #if(googlePlace == None):
     if('Restaurant' in googlePlace or 'restaurant' in googlePlace):
         
             restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
@@ -120,8 +120,13 @@ def crawlData(driver, wait):
             print(restaurant_stars)
             print(numberOfReviews)
             
-                
-            numberOfReviewsButton.click()
+            
+            try:
+                numberOfReviewsButton.click()
+            except:
+                driver.execute_script("return arguments[0].scrollIntoView();", driver.find_element_by_class_name('section-reviewchart-right'))
+                numberOfReviewsButton.click()
+                    
             reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
             if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
                 # Crawl Comments
@@ -145,12 +150,13 @@ def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesT
         print("Restaurant wurde bereits in der Vergangenheit gecrawled")
         print("Update der Datenbank erfolgt!")     
         
-    for i in range (0, len(restaurant.reviewList) - 1):   
+    for i in range (0, len(restaurant.reviewList)):   
         if not(checkForDuplicate('User',restaurant.reviewList[i].userName, reviewTable)):       
             reviewTable.insert({'Restaurantname': restaurant.restaurant_title, 'User':  restaurant.reviewList[i].userName, 'Sterne':  restaurant.reviewList[i].reviewStars, 'Kommentar':  restaurant.reviewList[i].comment})
-            for k in range (0, len(restaurant.reviewList[i].pictures)):
-                if(len(restaurant.reviewList[i].pictures) >= 1 and "https" in restaurant.reviewList[i].pictures[k]):
-                    reviewPicturesTable.insert({'User':  restaurant.reviewList[i].userName, 'BildURL':  restaurant.reviewList[i].pictures[k]})
+            if(restaurant.reviewList[i].pictures != None):
+                for k in range (0, len(restaurant.reviewList[i].pictures)):
+                    if("https" in restaurant.reviewList[i].pictures[k]):
+                        reviewPicturesTable.insert({'User':  restaurant.reviewList[i].userName, 'BildURL':  restaurant.reviewList[i].pictures[k]})
        
 #Wrapper Funktion um zu überprüfen ob das Element bereits in der Datenbank enthalten ist.    
         
@@ -168,27 +174,26 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     print('')
     reviewList = []
         
-    #for i in range(1, numberOfReviews):
-    for i in range(1, 20):    
+    for i in range(1, numberOfReviews):
+    #for i in range(1, 50):    
         # google stops loading after 835 Reviews
         if(i >= 835):
             break
         else:    
-            ownerReviewIsPresent = False
+            unknownIsPresent = False
             try:
                 scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
             except Exception as err:
-                print('Owner Review gefunden: Element wird übersprungen')
+                print('Unbekanntes Element gefunden: Element wird übersprungen')
                 
-                ownerReview = scrollElement.find_element_by_class_name('section-review-owner-response-title')
+                unknown = scrollElement.find_element_by_class_name('section-review-interaction-button')
+                unknownIsPresent = True
                 
-                ownerReviewIsPresent = True
-            if(ownerReviewIsPresent == True): 
+            if(unknownIsPresent == True): 
                 
-                driver.execute_script("return arguments[0].scrollIntoView();", ownerReview)
-            
-                time.sleep(scroll_pause_time)   
-            
+                driver.execute_script("return arguments[0].scrollIntoView();", unknown)
+                time.sleep(scroll_pause_time) 
+
             else:
                 
                 userName = scrollElement.find_element_by_class_name('section-review-title').get_attribute("innerText")
@@ -211,27 +216,23 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 reviewText = scrollElement.find_element_by_class_name('section-review-text').get_attribute("innerText")
                 reviewStars = scrollElement.find_element_by_class_name('section-review-stars').get_attribute("aria-label")
                 reviewPhotoList = []
-                
-                present = False
-                try:
-                    driver.find_elements_by_class_name('section-review-photo')
-                    present = True
-                except Exception as err:
-                    print('Element: section-review-photo missing', err)    
-                if(present == True):
-                    photoCount = len(scrollElement.find_elements_by_class_name('section-review-photo'))
-                    for i in range (0, photoCount):
-                        reviewPhotoList.append(scrollElement.find_elements_by_class_name('section-review-photo')[i].get_attribute("style")[21:])
-                   
+
+                if(scrollElement.find_element_by_class_name('section-review-photos').get_attribute("style") != "display: none;"):
+                    photoCount = len(scrollElement.find_element_by_class_name('section-review-photos').find_elements_by_tag_name("button"))
+                    for j in range (0, photoCount):
+                        photo = scrollElement.find_elements_by_class_name('section-review-photo')[j]
+                        if(photo.find_element_by_class_name('section-review-photo-overlay').get_attribute("style") != "display: none;"):
+                            photo.find_element_by_class_name('section-review-photo-overlay').click()
+                        reviewPhotoList.append(photo.get_attribute("style")[21:])  
                 else:
-                    reviewPhotoList = [None]
+                    reviewPhotoList = None
                 review = Review(userName, reviewStars, reviewText, reviewPhotoList)
                 reviewList.append(review)
                 print('User: ' + review.userName)
                 print('Sterne: ' + review.reviewStars)
                 print('Comment: ' + review.comment)
-                if(review.pictures):
-                    print('PicturesCount: ' + str(len(review.pictures) - 1))
+                if(review.pictures != None):
+                    print('PicturesCount: ' + str(len(review.pictures)))
                     for k in range (0, len(review.pictures)) :
                         print('Pictures' + review.pictures[k])
                 print('---------------------------------------------------')
