@@ -6,6 +6,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from tkinter import *
+from tkinter import ttk
 
 '''
 Created on 17.04.2018
@@ -14,6 +16,13 @@ Created on 17.04.2018
 
 
 '''
+
+# Global GUI implementation
+gui = Tk()
+mainframe = ttk.Frame(gui, padding="3 3 12 12") 
+messageText = Message(mainframe, width = 400)
+restaurantTextbox = Text(mainframe, width = 49, height = 5)  
+reviewTextbox = Text(mainframe, width=49, height=25)
 
 '''     
 class to represent a review of an user
@@ -42,13 +51,15 @@ class Restaurant:
 main method to start the GUI and the webcrawler
  
 '''
-def main():
-    city = 'Muenchen'
-    print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
+def main(restaurantName, city):
+    
+    #city = 'Muenchen'
+    #print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
 
-    restaurantName = input()
+    #restaurantName = input() 
+    clearGUI()  
     navigateToRestaurantDetailPage(restaurantName, city)
-    print(restaurantName + " wurde erfolgreich gecrawled!")
+    printMsg(restaurantName + " wurde erfolgreich gecrawled!")
 
 '''     
 method to navigate to the Google Place
@@ -59,9 +70,10 @@ def navigateToRestaurantDetailPage(restaurantName , city):
         
     url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
     print(url)
+    printMsg('URL wird in Google Chrome aufgerufen...')     
         
     driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
-    driver.set_window_position(0, 0)
+    driver.set_window_position(450, 0)
     driver.set_window_size(1024, 768)
     driver.get(url)
     wait = WebDriverWait(driver, 10)
@@ -82,7 +94,8 @@ def navigateToRestaurantDetailPage(restaurantName , city):
                 present = False
                     
             if(present == False):  
-                print("Mehrer Ergebnisse wurden gefunden --- Es wird das erste Restaurant in der Liste ausgewählt")     
+                print("Mehrer Ergebnisse wurden gefunden. Es wird das erste Restaurant in der Liste ausgewählt")   
+                printMsg("Mehrer Ergebnisse gefunden, erstes Restaurant der Liste wird ausgewählt.")  
                 results = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-result-content')))
                 if(results):
                     foundElements = driver.find_elements_by_class_name('section-result-content')
@@ -93,6 +106,8 @@ def navigateToRestaurantDetailPage(restaurantName , city):
                                     
         except Exception as err:
             print('Es wurde kein Ergebniss für das Restaurant: ' + restaurantName + ' gefunden.')
+            printMsg('Es wurde kein Ergebniss für ' + restaurantName + ' gefunden.')
+            
             driver.close()
                           
         crawlData(driver, wait)
@@ -114,12 +129,14 @@ def crawlData(driver, wait):
         
     except:
         print("Fehler beim Anlegen der Datenbank")
+        printMsg("Fehler beim Anlegen der Datenbank")
              
     try:
         googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
     except:
         googlePlace = None
-        print('Gefundener Ort ist kein Restaurant')    
+        print('Gefundener Ort ist kein Restaurant')  
+        printMsg('Gefundener Ort ist kein Restaurant')   
     #if(googlePlace == None):
     if('Restaurant' in googlePlace or 'restaurant' in googlePlace):
         
@@ -132,10 +149,12 @@ def crawlData(driver, wait):
                 numberOfReviews = int(numberOfReviews.replace('.', ''))
             else:
                 numberOfReviews = int(numberOfReviews)
-                
+            """     
             print(restaurant_title)
             print(restaurant_stars)
             print(numberOfReviews)
+            """
+            printRestaurant(restaurant_title, restaurant_stars, str(numberOfReviews))
             
             
             try:
@@ -156,6 +175,7 @@ def crawlData(driver, wait):
            
     else: 
             print('Gefundener Ort ist kein Restaurant')
+            printMsg('Gefundener Ort ist kein Restaurant')
 
 
 '''     
@@ -171,6 +191,7 @@ def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesT
     else:
         print("Restaurant wurde bereits in der Vergangenheit gecrawled")
         print("Update der Datenbank erfolgt!")     
+        printMsg("Restaurant wurde bereits gecrawled. Datenbank wurde aktualisert.")  
         
     for i in range (0, len(restaurant.reviewList)):   
         if not(checkForDuplicate('User',restaurant.reviewList[i].userName, reviewTable)):       
@@ -199,8 +220,10 @@ method to scroll over all reviews and also safing the data to objects from the r
 
 def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     
+    """
     print('Reviews:')
     print('')
+    """
     reviewList = []
         
     for i in range(1, numberOfReviews):
@@ -214,6 +237,7 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
             except Exception as err:
                 print('Unbekanntes Element gefunden: Element wird übersprungen')
+                printMsg('Unbekanntes Element gefunden: Element wird übersprungen')
                 
                 unknown = scrollElement.find_element_by_class_name('section-review-interaction-button')
                 unknownIsPresent = True
@@ -257,6 +281,10 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                     reviewPhotoList = None
                 review = Review(userName, reviewStars, reviewText, reviewPhotoList)
                 reviewList.append(review)
+                
+                printReview(review)
+                
+                """
                 print('User: ' + review.userName)
                 print('Sterne: ' + review.reviewStars)
                 print('Comment: ' + review.comment)
@@ -265,12 +293,100 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                     for k in range (0, len(review.pictures)) :
                         print('Pictures' + review.pictures[k])
                 print('---------------------------------------------------')
-                
+                """
                 driver.execute_script("return arguments[0].scrollIntoView();", scrollElement)
             
                 time.sleep(scroll_pause_time)
             
     return reviewList   
 
-main()
+
+def startGUI():
+    
+    gui.title("Google Places Webcrawler") # Window title
+    gui.geometry('440x729+0+0') # Window size and position
+
+    # Parent Element Settings
+    mainframe.grid(column=0, row=0, sticky=(N, W, S))
+    mainframe.columnconfigure(0, weight=1)
+    mainframe.rowconfigure(0, weight=1)
+    
+    # Variables
+    city = 'München'
+    guiInputValue = StringVar()
+
+    # Text label
+    ttk.Label(mainframe, text ='Über welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?').grid(column=0, row=1, sticky=W)
+
+    # Restaurant Input Box
+    restaurantInput = ttk.Entry(mainframe, width=10, textvariable=guiInputValue)
+    restaurantInput.grid(column=0, row=2, sticky=(W, E))
+
+    # Output Message Text
+    messageText.grid(column=0, row=3, sticky= W)
+    
+    # Start Webcrawler Button
+    ttk.Button(mainframe, text='Start', command=lambda: main(guiInputValue.get(), city) ).grid(column=0, row=4, sticky=E)
+    
+    # Output Label RestaurantInfo
+    ttk.Label(mainframe, text ='Restaurant Information:').grid(column=0, row=5, sticky=(W))
+    
+    # Output Textbox Restaurant meta-data    
+    restaurantTextbox.grid(column=0, row=6, sticky=(W,E), padx = 10, pady = 10)
+
+    # Output Label Reviews
+    ttk.Label(mainframe, text ='Bewertungen:').grid(column=0, row=7, sticky=(W))
+    
+    # Output Textbox Reviews
+    reviewTextbox.grid(column=0, row=8, sticky=W, padx = 10, pady = 10)
+
+    scrollbarY = ttk.Scrollbar(mainframe, orient=VERTICAL, command=reviewTextbox.yview)
+    scrollbarY.grid(column=1, row=8, sticky=(N,S))
+    reviewTextbox['yscrollcommand'] = scrollbarY.set
+   
+
+    # Add padding to all child-elements of mainframe
+    for child in mainframe.winfo_children(): child.grid_configure(padx=5, pady=5)
+
+    restaurantInput.focus()
+    gui.bind('<Return>', lambda event: main(guiInputValue.get(), city))
+
+    gui.mainloop() # Start GUI
+
+
+def printMsg(msg):
+    messageText['text'] = msg
+    
+    gui.update()
+
+
+def printRestaurant(restaurant_title, restaurant_stars, numberOfReviews):
+    restaurantTextbox.insert('end', 'Restaurant: ' + restaurant_title + '\n')
+    restaurantTextbox.insert('end', 'Sterne: ' + restaurant_stars + '\n')
+    restaurantTextbox.insert('end', 'Anzahl der Bewertungen: ' + numberOfReviews + '\n')
+    
+    gui.update()
+    
+
+def printReview(review):
+    
+    reviewTextbox.insert('end', 'User: ' + review.userName + '\n')
+    reviewTextbox.insert('end', 'Sterne: ' + review.reviewStars + '\n')
+    reviewTextbox.insert('end', ('Comment: ' + review.comment  + '\n').encode("utf-8", "ignore"))
+    if(review.pictures != None):
+        reviewTextbox.insert('end', 'PicturesCount: ' + str(len(review.pictures)) + '\n')
+        for k in range (0, len(review.pictures)) :
+            reviewTextbox.insert('end', 'Pictures' + review.pictures[k] + '\n')
+    reviewTextbox.insert('end', '\n' + '------------------------------------------------' + '\n\n')
+    reviewTextbox.see(END)
+    
+    gui.update()
+
+
+def clearGUI():
+    reviewTextbox.delete('1.0', END)
+    restaurantTextbox.delete('1.0', 'end')
+    messageText['text'] = ''
+
+startGUI()
 
