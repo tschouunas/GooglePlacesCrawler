@@ -53,10 +53,6 @@ main method to start the GUI and the webcrawler
 '''
 def main(restaurantName, city):
     
-    #city = 'Muenchen'
-    #print('Ueber welches Restaurant in ' + city + ' wollen Sie Informationen erhalten?:')
-
-    #restaurantName = input() 
     clearGUI()  
     navigateToRestaurantDetailPage(restaurantName, city)
     printMsg(restaurantName + " wurde erfolgreich gecrawled!")
@@ -71,24 +67,27 @@ def navigateToRestaurantDetailPage(restaurantName , city):
     url = 'https://www.google.de/maps/search/' + restaurantName + '/@48.151241,11.4996846,12z'
     print(url)
     printMsg('URL wird in Google Chrome aufgerufen...')     
-        
+    
+    #chrome driver config (dimension)
     driver = webdriver.Chrome(executable_path='..\..\driver\chromedriver.exe')
     driver.set_window_position(450, 0)
     driver.set_window_size(1024, 768)
+    #starts chrome driver and opens the url
     driver.get(url)
     wait = WebDriverWait(driver, 10)
     
+    #check for so google popup elements and try to close it
     try:
-        
         googleElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="consent-bump"]/div/div[2]/span/button[1]')))
         if(googleElement):
             googleElement.click()
     finally:        
-        
+    
+    #checks for results and choose the first result as restaurant    
         try:  
             present = False
             try:
-                productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description')))
+                wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description')))
                 present = True
             except:    
                 present = False
@@ -102,24 +101,24 @@ def navigateToRestaurantDetailPage(restaurantName , city):
                     if(foundElements):
                         foundElements[0].click()
             else:
-                productDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description'))) 
+                wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-description'))) 
                                     
         except Exception as err:
             print('Es wurde kein Ergebniss für das Restaurant: ' + restaurantName + ' gefunden.')
             printMsg('Es wurde kein Ergebniss für ' + restaurantName + ' gefunden.')
-            
+            #closes the chrome driver 
             driver.close()
-                          
+        #crawls all restaurant data                  
         crawlData(driver, wait)
  
 '''     
 method to crawl the data with selenium and safe the restaurant data to objects from class restaurant.
-After safing the data, the informations will be stored in the database (insertReviewIntoDB())
+After saving the data, the informations will be stored in the database (insertReviewIntoDB())
  
 '''       
         
 def crawlData(driver, wait):  
-    
+    #creates database and tables
     try:
         db = TinyDB('..\database\db.json', sort_keys=True, indent = 4)
         db.purge()
@@ -130,53 +129,87 @@ def crawlData(driver, wait):
     except:
         print("Fehler beim Anlegen der Datenbank")
         printMsg("Fehler beim Anlegen der Datenbank")
-             
+        
+    #checks for restaurant         
     try:
         googlePlace = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[1]/div[3]/div[2]/div/div[2]/span[1]/span[1]/button'))).get_attribute("innerHTML")
     except:
         googlePlace = None
         print('Gefundener Ort ist kein Restaurant')  
         printMsg('Gefundener Ort ist kein Restaurant')   
-    #if(googlePlace == None):
+    
+    #crawling data and saves restaurant_title, restaurant_stars and restaurant_rushHour
     if('Restaurant' in googlePlace or 'restaurant' in googlePlace):
         
             restaurant_title = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-hero-header-title'))).get_attribute("innerHTML")
             restaurant_stars = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-star-display'))).get_attribute("innerHTML")
-            restaurant_rushHour = ''
+            # get all hour elements out of the rushhour chart 
+            workload = []
+            days = driver.find_elements_by_xpath('//*[@id="pane"]/div/div[1]/div/div/div[14]/div[2]/div')
+            maxWorkloadAtDays = {}
+            for j in range (0, len(days)):
+                hours = days[j].find_elements_by_class_name('section-popular-times-bar')
+                
+                for i in range (0, len(hours)): 
+                    
+                    string = hours[i].get_attribute('aria-label')
+                    if not  (re.findall('([0-9]*)', string) == ""):
+                        workload.append((re.findall('([0-9]*)', string[10:])))
+                #get maximum workload for each day                    
+                maxWorkloadAtDays[j] = max(workload)
+        
+            #get the day of the maximum workload of the restaurant and save it to the rushHour variable
+            restaurant_rushHour = getRushHourDay(max(maxWorkloadAtDays)) + 's'
             numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
             numberOfReviews = numberOfReviewsButton.get_attribute("innerHTML")[0:-9]
+            #saves number of reviews 
             if('.' in numberOfReviews):
                 numberOfReviews = int(numberOfReviews.replace('.', ''))
             else:
                 numberOfReviews = int(numberOfReviews)
-            """     
-            print(restaurant_title)
-            print(restaurant_stars)
-            print(numberOfReviews)
-            """
-            printRestaurant(restaurant_title, restaurant_stars, str(numberOfReviews))
+            #prints restaurant information to the GUI
+            printRestaurant(restaurant_title, restaurant_stars, str(numberOfReviews), restaurant_rushHour)
             
             
             try:
+                #clicks on the review button
                 numberOfReviewsButton.click()
             except:
+                #scrolls to the review button and clicks
                 driver.execute_script("return arguments[0].scrollIntoView();", driver.find_element_by_class_name('section-reviewchart-right'))
                 numberOfReviewsButton.click()
                     
             reviewDetailPage = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'section-header-title')))
             if reviewDetailPage.get_attribute("innerHTML") == 'Alle Rezensionen':
-                # Crawl Comments
-                
+                #scroll over all reviews and crawl all data
                 reviewList = scrollOverAllReviews(driver, 0.1, wait, numberOfReviews)
-                
+                #saves all data to the restaurant object
                 restaurant = Restaurant(restaurant_title, restaurant_stars, restaurant_rushHour , reviewList)
-                
+                #inserts all restaurant data into the database
                 insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable)  
            
     else: 
             print('Gefundener Ort ist kein Restaurant')
             printMsg('Gefundener Ort ist kein Restaurant')
 
+            
+            '''     
+method to get the day of the week where most visitors are in the restaurant
+ 
+'''           
+def getRushHourDay(maxWorkloadAtDays):    
+    
+    #switch case to select a day 
+    switcher = {
+        0: "Montag",
+        1: "Dienstag",
+        2: "Mittwoch",
+        3: "Donnerstag",
+        4: "Freitag",
+        5: "Samstag",
+        6: "Sonntag"
+    }
+    return switcher.get(maxWorkloadAtDays) 
 
 '''     
 method to store data in the database including all Reviews, Pictures and main information of the restaurant
@@ -185,8 +218,9 @@ method to store data in the database including all Reviews, Pictures and main in
         
 def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesTable):
     
+    #checks for duplicate in the restaurant table
     if not(checkForDuplicate('Restaurantname',restaurant.restaurant_title, restaurantTable)):
-           
+        #inserts the restaurant, the rating and the rush hour into the restaurant table   
         restaurantTable.insert({'Restaurantname': restaurant.restaurant_title, 'Gesamtbewertung' : restaurant.restaurant_stars, 'Stosszeiten' : restaurant.rush_hours})    
     else:
         print("Restaurant wurde bereits in der Vergangenheit gecrawled")
@@ -194,11 +228,15 @@ def insertReviewIntoDB(restaurant, restaurantTable, reviewTable, reviewPicturesT
         printMsg("Restaurant wurde bereits gecrawled. Datenbank wurde aktualisert.")  
         
     for i in range (0, len(restaurant.reviewList)):   
-        if not(checkForDuplicate('User',restaurant.reviewList[i].userName, reviewTable)):       
+        #checks for duplicate in the user table
+        if not(checkForDuplicate('User',restaurant.reviewList[i].userName, reviewTable)): 
+            #inserts the restaurant name, the user and all the review information into the review table      
             reviewTable.insert({'Restaurantname': restaurant.restaurant_title, 'User':  restaurant.reviewList[i].userName, 'Sterne':  restaurant.reviewList[i].reviewStars, 'Kommentar':  restaurant.reviewList[i].comment})
+            #checks if review includes pictures
             if(restaurant.reviewList[i].pictures != None):
                 for k in range (0, len(restaurant.reviewList[i].pictures)):
                     if("https" in restaurant.reviewList[i].pictures[k]):
+                        #inserts the user name and the pictures into the pictures table
                         reviewPicturesTable.insert({'User':  restaurant.reviewList[i].userName, 'BildURL':  restaurant.reviewList[i].pictures[k]})
        
 '''     
@@ -207,7 +245,7 @@ wrapper method to check for duplicates in the database tables
 ''' 
         
 def checkForDuplicate (dbfield, element, dbTable): 
-           
+    #searches the element and returns true or false if the element is already in the database       
     if(dbTable.contains((where(dbfield) == element))): 
         return True 
     else:
@@ -227,11 +265,11 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
     reviewList = []
         
     for i in range(1, numberOfReviews):
-    #for i in range(1, 50):    
-        # google stops loading after 835 Reviews
+        #google stops loading after 835 Reviews
         if(i >= 835):
             break
-        else:    
+        else:
+            #checks for unknown elements and tries to skip it     
             unknownIsPresent = False
             try:
                 scrollElement = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pane"]/div/div[1]/div/div/div[2]/div[8]/div[' + str(i) + ']')))
@@ -243,16 +281,17 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                 unknownIsPresent = True
                 
             if(unknownIsPresent == True): 
-                
+                #scrolls over the unkown element
                 driver.execute_script("return arguments[0].scrollIntoView();", unknown)
                 time.sleep(scroll_pause_time) 
 
             else:
-                
+                #crawls the user name
                 userName = scrollElement.find_element_by_class_name('section-review-title').get_attribute("innerText")
-                # Mehr Button im Review
+                # checks for an expand button in the review 
                 expandButtonIsPresent = False
                 try:
+                    
                     expandReviewButton = scrollElement.find_element_by_css_selector('button.section-expand-review.blue-link')
                     
                     if(expandReviewButton.get_attribute("style") != "display: none;"):
@@ -263,13 +302,13 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                     expandButtonIsPresent = False
                     
                 if(expandButtonIsPresent == True):
-                    
+                    #tries to click the review expand button
                     expandReviewButton.click()
-                
+                #crawls the review text, the review stars and the pictures
                 reviewText = scrollElement.find_element_by_class_name('section-review-text').get_attribute("innerText")
                 reviewStars = scrollElement.find_element_by_class_name('section-review-stars').get_attribute("aria-label")
                 reviewPhotoList = []
-
+                #checks for pictures and saves it to the photoList
                 if(scrollElement.find_element_by_class_name('section-review-photos').get_attribute("style") != "display: none;"):
                     photoCount = len(scrollElement.find_element_by_class_name('section-review-photos').find_elements_by_tag_name("button"))
                     for j in range (0, photoCount):
@@ -279,27 +318,24 @@ def scrollOverAllReviews(driver, scroll_pause_time, wait, numberOfReviews):
                         reviewPhotoList.append(photo.get_attribute("style")[21:])  
                 else:
                     reviewPhotoList = None
-                review = Review(userName, reviewStars, reviewText, reviewPhotoList)
-                reviewList.append(review)
                 
+                #saves all review data to the review object    
+                review = Review(userName, reviewStars, reviewText, reviewPhotoList)
+                #append the review to all reviews 
+                reviewList.append(review)
+                #print review to the GUI
                 printReview(review)
                 
-                """
-                print('User: ' + review.userName)
-                print('Sterne: ' + review.reviewStars)
-                print('Comment: ' + review.comment)
-                if(review.pictures != None):
-                    print('PicturesCount: ' + str(len(review.pictures)))
-                    for k in range (0, len(review.pictures)) :
-                        print('Pictures' + review.pictures[k])
-                print('---------------------------------------------------')
-                """
+                #scrolls to the next review in the review list
                 driver.execute_script("return arguments[0].scrollIntoView();", scrollElement)
-            
                 time.sleep(scroll_pause_time)
             
     return reviewList   
 
+'''     
+method to start the GUI
+
+'''
 
 def startGUI():
     
@@ -353,20 +389,33 @@ def startGUI():
 
     gui.mainloop() # Start GUI
 
+'''     
+method to print messages to the GUI
+
+'''
 
 def printMsg(msg):
     messageText['text'] = msg
     
     gui.update()
 
+'''     
+method to print main information of the restaurant to the GUI
 
-def printRestaurant(restaurant_title, restaurant_stars, numberOfReviews):
+'''
+
+def printRestaurant(restaurant_title, restaurant_stars, numberOfReviews, restaurant_rushHour):
     restaurantTextbox.insert('end', 'Restaurant: ' + restaurant_title + '\n')
     restaurantTextbox.insert('end', 'Sterne: ' + restaurant_stars + '\n')
+    restaurantTextbox.insert('end', 'Stoßzeiten: ' + restaurant_rushHour + '\n')
     restaurantTextbox.insert('end', 'Anzahl der Bewertungen: ' + numberOfReviews + '\n')
     
     gui.update()
-    
+
+'''     
+method to print informations of a review to the GUI
+
+'''    
 
 def printReview(review):
     
@@ -382,11 +431,15 @@ def printReview(review):
     
     gui.update()
 
+'''     
+method to clear the GUI
 
+'''  
 def clearGUI():
     reviewTextbox.delete('1.0', END)
     restaurantTextbox.delete('1.0', 'end')
     messageText['text'] = ''
 
+#start the program
 startGUI()
 
