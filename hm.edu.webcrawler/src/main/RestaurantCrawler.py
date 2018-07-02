@@ -53,8 +53,10 @@ main method to start the GUI and the webcrawler
 '''
 def main(restaurantName, city):
     
-    clearGUI()  
+    clearGUI() 
+	#starts the browser and navigates to the google place
     navigateToRestaurantDetailPage(restaurantName, city)
+	#prints messages to the GUI after the restaurant is crawled succesfully
     printMsg(restaurantName + " wurde erfolgreich gecrawled!")
 
 '''     
