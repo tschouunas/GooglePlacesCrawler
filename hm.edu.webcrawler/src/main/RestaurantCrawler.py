@@ -157,11 +157,15 @@ def crawlData(driver, wait):
                     string = hours[i].get_attribute('aria-label')
                     if not  (re.findall('([0-9]*)', string) == ""):
                         workload.append((re.findall('([0-9]*)', string[10:])))
-                #get maximum workload for each day                    
+                #get maximum workload for each day      
                 maxWorkloadAtDays[j] = max(workload)
-        
+                
+               
             #get the day of the maximum workload of the restaurant and save it to the rushHour variable
-            restaurant_rushHour = getRushHourDay(max(maxWorkloadAtDays)) + 's'
+            if (len(maxWorkloadAtDays) == 0):
+                restaurant_rushHour = 'Keine Stosszeit gefunden'
+            else:
+                restaurant_rushHour = getRushHourDay(max(maxWorkloadAtDays)) + 's'
             numberOfReviewsButton = driver.find_element_by_class_name('section-reviewchart-numreviews')
             numberOfReviews = numberOfReviewsButton.get_attribute("innerHTML")[0:-9]
             #saves number of reviews 
